@@ -319,9 +319,12 @@ class MemoryProvider(MemoryProviderBase):
     async def get_user_profile(self) -> str:
         """
         Get user profile from PowerMem (only available in UserMemory mode).
-        
-        In PowerMem 0.3.0+, user profile is automatically extracted during add()
-        and cached in last_profile_content.
+
+        Uses a cache-first strategy:
+        1. Check if last_profile_content is already cached
+        2. If cached, return immediately (performance optimization)
+        3. If cache is empty, fetch from PowerMem SDK
+        4. Store fetched profile in cache for next query
 
         Returns:
             Formatted user profile string or empty string if not available
@@ -333,9 +336,47 @@ class MemoryProvider(MemoryProviderBase):
             logger.bind(tag=TAG).debug("User profile mode is not enabled")
             return ""
 
-        # Return cached profile content from last add() operation
+        # Return cached profile content if available (fast path)
         if self.last_profile_content:
+            logger.bind(tag=TAG).debug("Returning cached user profile")
             return self.last_profile_content
 
-        return ""
+        # Cache is empty, fetch from PowerMem SDK
+        logger.bind(tag=TAG).info("Cache miss, fetching user profile from PowerMem SDK")
+        try:
+            # Call UserMemory.profile() to get profile data
+            profile_data = await asyncio.to_thread(
+                self.memory_client.profile,
+                self.role_id
+            )
+
+            if not profile_data:
+                logger.bind(tag=TAG).warning("PowerMem SDK returned empty profile data")
+                return ""
+
+            # Try to use profile_content first
+            profile_content = profile_data.get("profile_content")
+            if profile_content:
+                # Update cache with fetched profile_content
+                self.last_profile_content = profile_content
+                logger.bind(tag=TAG).info(f"Successfully fetched and cached user profile from profile_content (length: {len(self.last_profile_content)})")
+                return self.last_profile_content
+
+            # If profile_content is empty, fallback to topics
+            topics = profile_data.get("topics")
+            if topics:
+                import json
+                # Serialize topics dict to JSON string for structured profile
+                self.last_profile_content = json.dumps(topics, ensure_ascii=False, indent=2)
+                logger.bind(tag=TAG).info(f"Successfully fetched and cached user profile from topics (length: {len(self.last_profile_content)})")
+                return self.last_profile_content
+
+            # Both profile_content and topics are empty
+            logger.bind(tag=TAG).warning("PowerMem SDK returned profile with empty profile_content and topics")
+            return ""
+
+        except Exception as e:
+            logger.bind(tag=TAG).error(f"Failed to fetch user profile from SDK: {str(e)}")
+            logger.bind(tag=TAG).debug(f"Detailed error: {traceback.format_exc()}")
+            return ""
 
