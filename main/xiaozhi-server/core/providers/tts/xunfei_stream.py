@@ -168,6 +168,8 @@ class TTSProvider(TTSProviderBase):
                 )
 
                 if message.sentence_type == SentenceType.FIRST:
+                    # 重置流式处理状态
+                    self.reset_stream_state()
                     # 重置序列号
                     self.text_seq = 0
                 # 增加序列号
@@ -245,12 +247,17 @@ class TTSProvider(TTSProviderBase):
                 return
 
             filtered_text = MarkdownCleaner.clean_markdown(text)
-            if self._correct_words_pattern:
-                filtered_text = self._correct_words_pattern.sub(lambda m: self.correct_words[m.group(0)], filtered_text)
+
             if filtered_text:
-                # 发送文本合成请求
-                run_request = self._build_base_request(status=1,text=filtered_text)
-                await self.ws.send(json.dumps(run_request))
+                # 使用滑动窗口匹配处理跨分片的替换词
+                confirmed_texts, self._pending_prefix = self._match_stream_text(filtered_text)
+
+                # 发送每个确定的文本片段
+                for txt in confirmed_texts:
+                    if txt and self.ws:
+                        # 发送文本合成请求
+                        run_request = self._build_base_request(status=1, text=txt)
+                        await self.ws.send(json.dumps(run_request))
             return
 
         except Exception as e:

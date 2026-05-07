@@ -64,11 +64,20 @@ class TTSProviderBase(ABC):
             reverse_pattern_str = "|".join(re.escape(k) for k in sorted_reverse_keys)
             self._reverse_words_pattern = re.compile(reverse_pattern_str)
             self._reverse_words_map = reverse_map
+            # 流式滑动窗口：按首字分组的替换词字典，用于快速查找
+            self._words_by_first_char = {}
+            for key in sorted_keys:  # 使用已按长度降序排列的keys，确保长词优先匹配
+                first_char = key[0] if key else ""
+                if first_char not in self._words_by_first_char:
+                    self._words_by_first_char[first_char] = []
+                self._words_by_first_char[first_char].append(key)
         else:
             self._correct_words_pattern = None
             self._reverse_words_pattern = None
             self._reverse_words_map = None
 
+        # 流式滑动窗口：待匹配的缓存文本
+        self._pending_prefix = ""
         self.tts_text_buff = []
         self.punctuations = (
             "。",
@@ -564,3 +573,64 @@ class TTSProviderBase(ABC):
             if config_key in config:
                 val = convert_percentage_to_range(config[config_key], min_val, max_val, base_val)
                 setattr(self, attr_name, transform(val) if transform else val)
+
+    def _match_stream_text(self, text):
+        """流式文本滑动窗口匹配，用于处理跨分片的替换词
+
+        Args:
+            text: 输入的文本片段
+
+        Returns:
+            tuple: (确定的文本列表, 剩余待匹配的前缀)
+        """
+        if not self.correct_words or not text:
+            return [text] if text else [], ""
+
+        result = []
+        pending = self._pending_prefix
+        i = 0
+
+        while i < len(text):
+            char = text[i]
+
+            # 尝试：pending + 当前字符 是否能匹配替换词
+            test_text = pending + char
+
+            matched = False
+            # 遍历可能匹配的替换词
+            candidates = self._words_by_first_char.get(pending[0], []) if pending else self._words_by_first_char.get(char, [])
+            for key in candidates:
+                if test_text == key:
+                    # 完整匹配，替换后发送
+                    result.append(self.correct_words[key])
+                    pending = ""
+                    matched = True
+                    break
+                elif key.startswith(test_text):
+                    # 是替换词的前缀，继续等待
+                    pending = test_text
+                    matched = True
+                    break
+
+            if matched:
+                i += 1
+                continue
+
+            # 没有匹配到更长的词，pending 的内容确定可以发送
+            if pending:
+                result.append(pending)
+                pending = ""
+
+            # 检查当前字符是否是某个替换词的开头
+            if char in self._words_by_first_char:
+                pending = char
+            else:
+                result.append(char)
+
+            i += 1
+
+        return result, pending
+
+    def reset_stream_state(self):
+        """重置流式处理状态，用于会话开始时清理残留状态"""
+        self._pending_prefix = ""

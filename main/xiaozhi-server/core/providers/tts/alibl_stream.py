@@ -124,6 +124,8 @@ class TTSProvider(TTSProviderBase):
                 )
 
                 if message.sentence_type == SentenceType.FIRST:
+                    # 重置流式处理状态
+                    self.reset_stream_state()
                     # 初始化会话
                     try:
                         if not getattr(self.conn, "sentence_id", None): 
@@ -194,22 +196,24 @@ class TTSProvider(TTSProviderBase):
 
             # 过滤Markdown
             filtered_text = MarkdownCleaner.clean_markdown(text)
-            if self._correct_words_pattern:
-                filtered_text = self._correct_words_pattern.sub(lambda m: self.correct_words[m.group(0)], filtered_text)
 
             if filtered_text:
-                # 发送continue-task消息
-                continue_task_message = {
-                    "header": {
-                        "action": "continue-task",
-                        "task_id": self.conn.sentence_id,
-                        "streaming": "duplex",
-                    },
-                    "payload": {"input": {"text": filtered_text}},
-                }
+                # 使用滑动窗口匹配处理跨分片的替换词
+                confirmed_texts, self._pending_prefix = self._match_stream_text(filtered_text)
 
-                await self.ws.send(json.dumps(continue_task_message))
-                self.last_active_time = time.time()
+                # 发送每个确定的文本片段
+                for txt in confirmed_texts:
+                    if txt and self.ws:
+                        continue_task_message = {
+                            "header": {
+                                "action": "continue-task",
+                                "task_id": self.conn.sentence_id,
+                                "streaming": "duplex",
+                            },
+                            "payload": {"input": {"text": txt}},
+                        }
+                        await self.ws.send(json.dumps(continue_task_message))
+                        self.last_active_time = time.time()
             return
         except Exception as e:
             logger.bind(tag=TAG).error(f"发送TTS文本失败: {str(e)}")

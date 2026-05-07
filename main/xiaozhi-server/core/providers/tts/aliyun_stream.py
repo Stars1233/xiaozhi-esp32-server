@@ -233,6 +233,8 @@ class TTSProvider(TTSProviderBase):
                 )
 
                 if message.sentence_type == SentenceType.FIRST:
+                    # 重置流式处理状态
+                    self.reset_stream_state()
                     # 初始化参数
                     try:
                         logger.bind(tag=TAG).debug("开始启动TTS会话...")
@@ -295,21 +297,26 @@ class TTSProvider(TTSProviderBase):
                 logger.bind(tag=TAG).warning(f"WebSocket连接不存在，终止发送文本")
                 return
             filtered_text = MarkdownCleaner.clean_markdown(text)
-            if self._correct_words_pattern:
-                filtered_text = self._correct_words_pattern.sub(lambda m: self.correct_words[m.group(0)], filtered_text)
+
             if filtered_text:
-                run_request = {
-                    "header": {
-                        "message_id": uuid.uuid4().hex,
-                        "task_id": self.task_id,
-                        "namespace": "FlowingSpeechSynthesizer",
-                        "name": "RunSynthesis",
-                        "appkey": self.appkey,
-                    },
-                    "payload": {"text": filtered_text},
-                }
-                await self.ws.send(json.dumps(run_request))
-                self.last_active_time = time.time()
+                # 使用滑动窗口匹配处理跨分片的替换词
+                confirmed_texts, self._pending_prefix = self._match_stream_text(filtered_text)
+
+                # 发送每个确定的文本片段
+                for txt in confirmed_texts:
+                    if txt and self.ws:
+                        run_request = {
+                            "header": {
+                                "message_id": uuid.uuid4().hex,
+                                "task_id": self.task_id,
+                                "namespace": "FlowingSpeechSynthesizer",
+                                "name": "RunSynthesis",
+                                "appkey": self.appkey,
+                            },
+                            "payload": {"text": txt},
+                        }
+                        await self.ws.send(json.dumps(run_request))
+                        self.last_active_time = time.time()
             return
 
         except Exception as e:

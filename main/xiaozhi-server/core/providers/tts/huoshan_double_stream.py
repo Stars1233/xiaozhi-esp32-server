@@ -300,6 +300,8 @@ class TTSProvider(TTSProviderBase):
                 )
 
                 if message.sentence_type == SentenceType.FIRST:
+                    # 重置流式处理状态
+                    self.reset_stream_state()
                     # 初始化参数
                     try:
                         if not getattr(self.conn, "sentence_id", None): 
@@ -370,12 +372,16 @@ class TTSProvider(TTSProviderBase):
 
             #  过滤Markdown
             filtered_text = MarkdownCleaner.clean_markdown(text)
-            if self._correct_words_pattern:
-                filtered_text = self._correct_words_pattern.sub(lambda m: self.correct_words[m.group(0)], filtered_text)
 
             if filtered_text:
-                # 发送文本
-                await self.send_text(self.voice, filtered_text, self.conn.sentence_id)
+                # 使用滑动窗口匹配处理跨分片的替换词
+                confirmed_texts, self._pending_prefix = self._match_stream_text(filtered_text)
+
+                # 发送每个确定的文本片段
+                for txt in confirmed_texts:
+                    if txt and self.ws:
+                        await self.send_text(self.voice, txt, self.conn.sentence_id)
+
             return
         except Exception as e:
             logger.bind(tag=TAG).error(f"发送TTS文本失败: {str(e)}")
