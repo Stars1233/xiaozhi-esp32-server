@@ -2,6 +2,7 @@ import os
 import sys
 import copy
 import json
+import re
 import uuid
 import time
 import queue
@@ -1009,21 +1010,25 @@ class ConnectionHandler:
                         self._merge_tool_calls(tool_calls_list, tools_call)
 
                     # 流式提取 direct_answer 的 response 参数，实时送 TTS
+                    # 使用安全缓冲区，防止 JSON 闭合符号泄漏到 TTS
+                    _DA_STREAM_BUFFER = 5
                     for tc in tool_calls_list:
                         if tc["name"] == "direct_answer" and tc.get("arguments"):
                             da_text = self._extract_direct_answer_response(tc["arguments"])
                             sent_len = tc.get("_da_sent", 0)
                             if da_text and len(da_text) > sent_len:
-                                new_part = da_text[sent_len:]
-                                tc["_da_sent"] = len(da_text)
-                                self.tts.tts_text_queue.put(
-                                    TTSMessageDTO(
-                                        sentence_id=current_sentence_id,
-                                        sentence_type=SentenceType.MIDDLE,
-                                        content_type=ContentType.TEXT,
-                                        content_detail=new_part,
+                                safe_end = max(sent_len, len(da_text) - _DA_STREAM_BUFFER)
+                                if safe_end > sent_len:
+                                    new_part = da_text[sent_len:safe_end]
+                                    tc["_da_sent"] = safe_end
+                                    self.tts.tts_text_queue.put(
+                                        TTSMessageDTO(
+                                            sentence_id=current_sentence_id,
+                                            sentence_type=SentenceType.MIDDLE,
+                                            content_type=ContentType.TEXT,
+                                            content_detail=new_part,
+                                        )
                                     )
-                                )
                 else:
                     content = response
 
@@ -1105,9 +1110,24 @@ class ConnectionHandler:
                         f"模型选择 direct_answer，流式已播报，写入对话历史"
                     )
                     for tc in direct_answer_calls:
-                        # 文本已在流式阶段实时播报，这里只写入对话历史
                         da_response = self._extract_direct_answer_response(tc.get("arguments", "{}"))
                         if da_response:
+                            # 刷新流式缓冲区中未发送的部分
+                            sent_len = tc.get("_da_sent", 0)
+                            remaining = da_response[sent_len:]
+                            if remaining:
+                                remaining = self._clean_trailing_json_garbage(remaining)
+                                if remaining:
+                                    self.tts.tts_text_queue.put(
+                                        TTSMessageDTO(
+                                            sentence_id=current_sentence_id,
+                                            sentence_type=SentenceType.MIDDLE,
+                                            content_type=ContentType.TEXT,
+                                            content_detail=remaining,
+                                        )
+                                    )
+                            # 写入对话历史
+                            da_response = self._clean_trailing_json_garbage(da_response)
                             self.tts.store_tts_text(current_sentence_id, da_response)
                             self.dialogue.put(Message(role="assistant", content=da_response))
 
@@ -1543,15 +1563,21 @@ class ConnectionHandler:
     @staticmethod
     def _extract_direct_answer_response(arguments_str):
         """从 direct_answer 的参数中提取 response 值。
-        支持完整的 JSON 和流式中不完整的 JSON 片段。
+        优先使用 json.loads 标准解析，流式阶段 fallback 到字符串提取。
         """
         if not arguments_str:
             return ""
-        # 找到 "response": " 的位置
+        # 优先尝试标准 JSON 解析（适用于完整且格式正确的 JSON）
+        try:
+            data = json.loads(arguments_str)
+            if isinstance(data, dict) and "response" in data:
+                return data["response"]
+        except (json.JSONDecodeError, TypeError):
+            pass
+        # Fallback：流式阶段 JSON 可能不完整，使用字符串提取
         marker = '"response": "'
         idx = arguments_str.find(marker)
         if idx < 0:
-            # 尝试不带空格的格式
             marker = '"response":"'
             idx = arguments_str.find(marker)
         if idx < 0:
@@ -1566,6 +1592,20 @@ class ConnectionHandler:
         # 处理 JSON 转义
         raw = raw.replace('\\"', '"').replace('\\n', '\n').replace('\\\\', '\\')
         return raw
+
+    @staticmethod
+    def _clean_trailing_json_garbage(text):
+        """清理 response 末尾可能泄漏的 JSON 闭合符号。
+        模型有时会在 response 内容中生成 JSON 闭合字符（如 ）"}} 或 '}），
+        这些不是故事内容的一部分，需要去除。
+        """
+        if not text:
+            return text
+        # 匹配末尾的 JSON 闭合垃圾模式：
+        # 可选的中文标点 ）')，紧跟 " 和 } 的组合，中间可夹杂空白/换行
+        # 例如：）"}}  '}"  }}  "}} 等
+        cleaned = re.sub(r'[\s\n]*[）\)]?[\s\n]*["\'}\]]{1,6}$', '', text)
+        return cleaned if cleaned else text
 
     def _merge_tool_calls(self, tool_calls_list, tools_call):
         """合并工具调用列表
