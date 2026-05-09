@@ -267,6 +267,13 @@ export default {
                     if (this.messages.length > 0 && this.messages[0].macAddress) {
                         this.currentMacAddress = this.messages[0].macAddress;
                     }
+                    // 更新会话列表中的聊天记录数量
+                    this.sessions = this.sessions.map(item => {
+                        if (item.sessionId === session.sessionId) {
+                            item.chatCount = this.messages.length;
+                        }
+                        return item;
+                    })
                 }
             });
         },
