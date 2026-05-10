@@ -121,6 +121,7 @@ wakeword_runtime/models/
 在 `main/xiaozhi-server/test` 目录执行：
 
 ```bash
+pip install -r wakeword_runtime/requirements.txt
 python start_test_runtime.py
 ```
 
@@ -135,42 +136,6 @@ python start_test_runtime.py
 - 在运行终端按 `Ctrl+C`
 - 会同时停止静态页面服务、事件桥和唤醒词检测流程
 
-## 运行依赖
-
-### 模型文件
-
-模型目录至少需要这些文件：
-
-- `encoder.onnx`
-- `decoder.onnx`
-- `joiner.onnx`
-- `tokens.txt`
-- `keywords.txt`
-
-### Python 依赖
-
-唤醒词服务依赖以下 Python 包：
-
-- `sherpa-onnx`
-- `sounddevice`
-- `pypinyin`
-
-**pip 安装（推荐）**：
-
-```bash
-# 在 conda 环境中
-conda activate xiaozhi-esp32-server
-cd main/xiaozhi-server/test/wakeword_runtime/
-pip install -r requirements.txt
-```
-
-> 如使用独立 conda 环境，可同时安装：
-> ```bash
-> conda create -n wakeword python=3.10 -y
-> conda activate wakeword
-> cd main/xiaozhi-server/test/wakeword_runtime/
-> pip install -r requirements.txt
-> ```
 
 ## 配置文件说明
 
