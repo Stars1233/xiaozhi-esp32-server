@@ -187,6 +187,7 @@ uploadfile
 !main/manager-mobile/**/.env*
 !main/manager-mobile/**/*.json
 !main/xiaozhi-server/**/*.json
-main/xiaozhi-server/test/wakeword_runtime/models
-main/xiaozhi-server/test/wakeword_runtime/sherpa-onnx-kws-zipformer-wenetspeech-3.3M-2024-01-01
+!main/digital-human/**/*.json
+main/digital-human/wakeword_runtime/models
+main/digital-human/wakeword_runtime/sherpa-onnx-kws-zipformer-wenetspeech-3.3M-2024-01-01
 sherpa-onnx-kws-zipformer-wenetspeech-3.3M-2024-01-01.tar.bz2

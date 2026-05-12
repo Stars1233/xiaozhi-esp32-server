@@ -224,7 +224,7 @@ Dieses Projekt bietet die folgenden Testwerkzeuge, um Ihnen bei der Überprüfun
 
 | Werkzeugname | Standort | Verwendungsmethode | Funktionsbeschreibung |
 |:---:|:---|:---:|:---:|
-| Audio-Interaktionstesttool | main》xiaozhi-server》test》test_page.html | Direkt mit Google Chrome öffnen | Testet Audio-Wiedergabe- und Empfangsfunktionen, überprüft, ob die Python-seitige Audioverarbeitung normal ist |
+| Audio-Interaktionstesttool | main》digital-human》index.html | In `main/digital-human` `python start.py` ausführen und dann `http://127.0.0.1:8006/index.html` öffnen | Testet Audio-Wiedergabe- und Empfangsfunktionen, überprüft, ob die Python-seitige Audioverarbeitung normal ist |
 | Modell-Reaktionstesttool | main》xiaozhi-server》performance_tester.py | Ausführen `python performance_tester.py` | Testet die Reaktionsgeschwindigkeit von ASR (Spracherkennung), LLM (großes Modell), VLLM (Vision-Modell), TTS (Sprachsynthese) drei Kernmodulen |
 
 > 💡 Hinweis: Beim Testen der Modellgeschwindigkeit werden nur Modelle mit konfigurierten Schlüsseln getestet.

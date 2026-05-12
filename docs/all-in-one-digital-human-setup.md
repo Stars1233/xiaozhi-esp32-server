@@ -290,11 +290,11 @@ conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
 
 #### 3. 上传项目文件
 
-将开发机上的 `main/xiaozhi-server/test/` 整个目录上传到一体机的 `~/test/` 目录：
+将开发机上的 `main/digital-human/` 整个目录上传到一体机的 `~/digital-human/` 目录：
 
 ```bash
 # 在开发机上执行（将 <一体机IP> 替换为实际 IP）
-scp -r main/xiaozhi-server/test/ xz@<一体机IP>:~/test/
+scp -r main/digital-human/ xz@<一体机IP>:~/digital-human/
 ```
 
 #### 4. 安装系统依赖
@@ -308,14 +308,14 @@ sudo apt install libportaudio2 portaudio19-dev libasound2-plugins -y
 #### 5. 安装 Python 依赖
 
 ```bash
-cd ~/test/wakeword_runtime
+cd ~/digital-human/wakeword_runtime
 pip install numpy
 pip install -r requirements.txt
 ```
 
 #### 6. 下载唤醒词模型
 
-模型文件不包含在项目中，需要单独下载配置，详见 `wakeword_runtime/README.md` 中的"模型下载"章节。
+模型文件不包含在项目中，需要单独下载配置，详见 [docs/digital-human-wakeword.md](digital-human-wakeword.md) 中的“模型下载”章节。
 
 #### 7. 修改 Openbox 自启动脚本
 
@@ -376,7 +376,7 @@ while true; do
         --disable-external-intent-requests \
         --autoplay-policy=no-user-gesture-required \
         --use-fake-ui-for-media-stream \
-        "http://127.0.0.1:8006/test_page.html"
+        "http://127.0.0.1:8006/index.html"
     sleep 2
 done &
 EOF
@@ -395,9 +395,9 @@ id -u $(whoami)
 然后用查到的 UID 替换下面 `1000`（通常第一个用户就是 1000）：
 
 ```bash
-sudo tee /etc/systemd/system/xiaozhi-test.service << 'EOF'
+sudo tee /etc/systemd/system/digital-human.service << 'EOF'
 [Unit]
-Description=XiaoZhi Test Runtime
+Description=Digital Human Runtime
 After=network.target sound.target
 
 [Service]
@@ -405,9 +405,9 @@ Type=simple
 User=xz
 Environment=XDG_RUNTIME_DIR=/run/user/1000
 Environment=PULSE_SERVER=unix:/run/user/1000/pulse/native
-WorkingDirectory=/home/xz/test
+WorkingDirectory=/home/xz/digital-human
 ExecStartPre=/bin/sleep 10
-ExecStart=/home/xz/miniconda3/envs/test/bin/python start_test_runtime.py
+ExecStart=/home/xz/miniconda3/envs/test/bin/python start.py
 Restart=on-failure
 RestartSec=10
 
@@ -426,17 +426,17 @@ EOF
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable xiaozhi-test
-sudo systemctl start xiaozhi-test
+sudo systemctl enable digital-human
+sudo systemctl start digital-human
 ```
 
 #### 9. 常用服务管理命令
 
 ```bash
-sudo systemctl start xiaozhi-test     # 立即启动
-sudo systemctl stop xiaozhi-test      # 停止
-sudo systemctl restart xiaozhi-test   # 重启
-sudo systemctl status xiaozhi-test    # 查看状态
-journalctl -u xiaozhi-test -f         # 查看实时日志
+sudo systemctl start digital-human     # 立即启动
+sudo systemctl stop digital-human      # 停止
+sudo systemctl restart digital-human   # 重启
+sudo systemctl status digital-human    # 查看状态
+journalctl -u digital-human -f         # 查看实时日志
 ```
 
