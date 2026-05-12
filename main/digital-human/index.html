@@ -4,8 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>小智服务器测试页面</title>
-    <link rel="stylesheet" href="css/test_page.css?v=0206">
+    <title>小智数字人页面</title>
+    <link rel="stylesheet" href="css/index.css?v=0206">
     <script>
         // 检测是否使用file://协议打开
         if (window.location.protocol === 'file:') {
@@ -21,11 +21,11 @@
                 warningDiv.innerHTML = `
                     <h2>⚠️ 警告：请使用HTTP服务器打开此页面</h2>
                     <p>您当前使用的是本地文件方式打开页面（file://协议），这可能导致页面功能异常。</p>
-                    <p>您可以使用nginx映射启动测试页面，也可以请按照以下步骤启动测试运行时：</p>
+                    <p>您可以使用nginx映射启动小智数字人页面，也可以请按照以下步骤启动测试运行时：</p>
                     <ol>
                         <li>打开命令行终端</li>
                         <li>命令行进入到 digital-human 目录</li>
-                        <li>执行以下命令启动测试页面运行时：</li>
+                        <li>执行以下命令启动小智数字人页面运行时：</li>
                     </ol>
                     <pre>python start.py</pre>
                     <p>然后在浏览器中访问：<strong>http://localhost:8006/index.html</strong></p>
