@@ -25,7 +25,7 @@ class TestRuntimeHttpServer:
 
     @property
     def page_url(self) -> str:
-        return f"http://127.0.0.1:{self.port}/test_page.html"
+        return f"http://127.0.0.1:{self.port}/index.html"
 
     @property
     def bridge_url(self) -> str:
