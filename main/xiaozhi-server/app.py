@@ -123,7 +123,7 @@ async def main():
         "=======上面的地址是websocket协议地址，请勿用浏览器访问======="
     )
     logger.bind(tag=TAG).info(
-        "如想测试websocket请用谷歌浏览器打开test目录下的test_page.html"
+        "如想测试websocket请启动digital-human模块，打开浏览器交互测试"
     )
     logger.bind(tag=TAG).info(
         "=============================================================\n"
