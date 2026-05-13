@@ -66,12 +66,12 @@ VAD:
 4、[如何自动拉取本项目最新代码自动编译和启动](./dev-ops-integration.md)<br/>
 5、[如何与Nginx集成](https://github.com/xinnan-tech/xiaozhi-esp32-server/issues/791)<br/>
 
-### 9、编译固件相关教程
+### 8、编译固件相关教程
 1、[如何自己编译小智固件](./firmware-build.md)<br/>
 2、[如何基于虾哥编译好的固件修改OTA地址](./firmware-setting.md)<br/>
 3、[单模块部署如何配置固件OTA自动升级](./ota-upgrade-guide.md)<br/>
 
-### 10、拓展相关教程
+### 9、拓展相关教程
 1、[如何开启手机号码注册智控台](./ali-sms-integration.md)<br/>
 2、[如何集成HomeAssistant实现智能家居控制](./homeassistant-integration.md)<br/>
 3、[如何开启视觉模型实现拍照识物](./mcp-vision-integration.md)<br/>
@@ -84,6 +84,10 @@ VAD:
 10、[如何部署上下文源](./context-provider-integration.md)<br/>
 11、[如何集成PowerMem智能记忆](./powermem-integration.md)<br/>
 12、[如何配置天气插件查询天气](./weather-integration.md)<br/>
+
+### 10、数字人相关教程
+1、[数字人digital-human启动方法](./digital-human-wakeword.md)<br/>
+2、[如何在N100迷你主机上部署数字人digital-human](./all-in-one-digital-human-setup.md)<br/>
 
 ### 11、语音克隆、本地语音部署相关教程
 1、[如何在智控台克隆音色](./huoshan-streamTTS-voice-cloning.md)<br/>
