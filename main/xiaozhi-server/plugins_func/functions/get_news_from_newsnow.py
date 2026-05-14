@@ -55,15 +55,7 @@ CHANNEL_MAP = {
 DEFAULT_NEWS_SOURCES = "澎湃新闻;百度热搜;财联社"
 
 def _get_newsnow_config(conn):
-    """从连接配置中获取newsnow插件配置，优先用conn.common_config，兜底用conn.config"""
-    # 优先从公共配置获取（保留本地config.yaml的配置）
-    common_plugins = getattr(conn, "common_config", {}).get("plugins", {})
-    common_newsnow = common_plugins.get("get_news_from_newsnow", {})
-    common_sources = common_newsnow.get("news_sources", "")
-    if isinstance(common_sources, str) and common_sources.strip():
-        return common_sources
-
-    # 兜底从连接配置获取
+    # 从连接配置获取
     plugins = conn.config.get("plugins", {})
     newsnow = plugins.get("get_news_from_newsnow", {})
     sources = newsnow.get("news_sources", "")
@@ -90,24 +82,6 @@ def get_news_sources_from_config(conn):
 
 # 从默认配置获取可用的新闻源名称（运行时由get_news_sources_from_config动态获取）
 example_sources_str = DEFAULT_NEWS_SOURCES.replace(";","、")
-
-def init_news_description(config: dict):
-    """项目启动时调用一次，根据配置更新工具描述中的新闻源示例"""
-    from types import SimpleNamespace
-    from plugins_func.register import all_function_registry
-
-    # 复用get_news_sources_from_config，用SimpleNamespace模拟conn
-    conn_wrapper = SimpleNamespace(config=config)
-    news_sources = get_news_sources_from_config(conn_wrapper)
-
-    sources_str = news_sources.replace(";","、")
-
-    func_item = all_function_registry.get("get_news_from_newsnow")
-    if func_item:
-        func_item.description["function"]["parameters"]["properties"]["source"][
-            "description"
-        ] = f"新闻源的标准中文名称，例如{sources_str}等。可选参数，如果不提供则使用默认新闻源"
-        logger.bind(tag=TAG).info(f"新闻工具描述已初始化，可用新闻源: {sources_str}")
 
 GET_NEWS_FROM_NEWSNOW_FUNCTION_DESC = {
     "type": "function",
